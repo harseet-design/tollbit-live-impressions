@@ -47,26 +47,12 @@ function Nav() {
    sits behind the text — it persists until the next article logs
    (state-driven, no timeout).
 */
-function ArticleRow({ article, isLatest }: { article: Article; isLatest: boolean }) {
-  // NOTE: the hairline divider is intentionally NOT rendered here. It lives
-  // on the list container as one continuous static line so it doesn't slide
-  // in when a new article enters — the content + coral highlight slide
-  // horizontally into the line, which stays put.
+/* ArticleRow is now just the content — no line, no isLatest. The orange
+   line lives separately (ArticleLineAccent) so it can stay at x = 0 while
+   the row content slides in from the right. */
+function ArticleRow({ article }: { article: Article }) {
   return (
-    <div className="flex gap-4 py-4 relative isolate">
-      {/* Sticky coral highlight (verbatim gradient from Figma 1120:38594) —
-          slides in with the content, fades on opacity handoff */}
-      <div
-        aria-hidden
-        className={`absolute inset-0 -z-10 pointer-events-none transition-opacity duration-[1200ms] ease-[cubic-bezier(0.45,0,0.55,1)] ${
-          isLatest ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{
-          backgroundImage: ARTICLE_HIGHLIGHT_SVG,
-          backgroundSize: '100% 100%',
-          backgroundRepeat: 'no-repeat',
-        }}
-      />
+    <div className="flex gap-4 py-4">
       <div className="flex flex-col gap-0.5 pl-4">
         <div className="flex items-center gap-1 font-jakarta text-[10px] leading-4 tracking-[0.1px] text-content-primary">
           <span
@@ -85,6 +71,37 @@ function ArticleRow({ article, isLatest }: { article: Article; isLatest: boolean
         </div>
       </div>
     </div>
+  );
+}
+
+/* Coral 1px accent over the static grey hairline.
+   Stays fixed horizontally (does NOT slide with the article content).
+     pre    clip 0/100%, opacity 1   collapsed at top, invisible
+     active clip 0/0,    opacity 1   full line, fully visible    — entered by clip-path slide-down
+     post   clip 0/0,    opacity 0   full line, fully transparent — exits by opacity fade-out
+   Same 1200ms ease-in-out timing as the previous gradient. */
+function ArticleLineAccent({ isLatest }: { isLatest: boolean }) {
+  const everLatestRef = useRef(false);
+  if (isLatest) everLatestRef.current = true;
+
+  const phase: 'pre' | 'active' | 'post' = isLatest
+    ? 'active'
+    : everLatestRef.current
+    ? 'post'
+    : 'pre';
+
+  const style = {
+    pre: { clipPath: 'inset(0 0 100% 0)', opacity: 1 },
+    active: { clipPath: 'inset(0 0 0 0)', opacity: 1 },
+    post: { clipPath: 'inset(0 0 0 0)', opacity: 0 },
+  }[phase];
+
+  return (
+    <span
+      aria-hidden
+      className="absolute left-0 top-0 bottom-0 w-px bg-brand-6 pointer-events-none transition-all duration-[1200ms] ease-[cubic-bezier(0.45,0,0.55,1)]"
+      style={style}
+    />
   );
 }
 
@@ -132,27 +149,45 @@ function LeftColumn({
         >
           {/* Continuous static hairline divider — anchored at the list's
               left edge, full height. It never moves; new article rows slide
-              in horizontally beside it. */}
-          <span className="absolute left-0 top-0 bottom-0 w-px bg-line-10 z-10" />
+              in horizontally beside it. Per-row coral overrides (in
+              ArticleRow) render on top of this. */}
+          <span className="absolute left-0 top-0 bottom-0 w-px bg-line-10" />
 
           <AnimatePresence initial={false}>
             {articles.map((a) => {
               const isNew = a.id === newId;
               return (
+                // Outer wrapper handles vertical reflow (layout) + opacity
+                // fade-in for the row as a whole. It does NOT slide
+                // horizontally — that's the inner wrapper's job.
                 <motion.div
                   key={a.id}
                   layout
-                  initial={isNew ? { opacity: 0, x: 60, scale: 0.98 } : { opacity: 1, x: 0 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  initial={isNew ? { opacity: 0 } : false}
+                  animate={{ opacity: 1 }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{
                     layout: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
                     opacity: { duration: 0.45 },
-                    x: { type: 'spring', stiffness: 220, damping: 26 },
-                    scale: { duration: 0.45 },
                   }}
+                  className="relative"
                 >
-                  <ArticleRow article={a} isLatest={a.id === latestArticleId} />
+                  {/* Stationary coral line — clip-path/opacity transitions
+                      only; does NOT translate with the article content. */}
+                  <ArticleLineAccent isLatest={a.id === latestArticleId} />
+
+                  {/* Sliding content — only the article text slides in
+                      from the right when the row is new. */}
+                  <motion.div
+                    initial={isNew ? { x: 60, scale: 0.98 } : false}
+                    animate={{ x: 0, scale: 1 }}
+                    transition={{
+                      x: { type: 'spring', stiffness: 220, damping: 26 },
+                      scale: { duration: 0.45 },
+                    }}
+                  >
+                    <ArticleRow article={a} />
+                  </motion.div>
                 </motion.div>
               );
             })}
