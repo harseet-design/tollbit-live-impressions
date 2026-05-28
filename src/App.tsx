@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-// NOTE: This branch (`slide-in-only`) is the MVP variant — article rows
-// slide in from the right with no coral line / gradient highlight.
+// NOTE: This branch (`tab-indicator`) replaces the orange line accent
+// with a "tab" — a small beige pill that protrudes from the hairline
+// next to the newest article row, then retracts back into the line.
+// Source: Figma node 1766:43269 ("Tab").
 import { AnimatePresence, motion } from 'framer-motion';
 import { INITIAL_ARTICLES, BUBBLES, makeNewArticle, relaxBubbles, type Article } from './data';
 
@@ -38,13 +40,23 @@ function Nav() {
 }
 
 /* ────────────────────── Article row ──────────────────────
-   MVP variant: no coral highlight — just the article content. The
-   sliding motion is handled by the wrapper in LeftColumn.
+   Reverted to the simpler layered structure (gap-0.5 vertical stack,
+   no text truncation), but with two carry-overs from the canonical
+   Figma impression (node 1771:43406):
+     • Inner content width = 284px (matches the Figma component)
+     • Bot icon = 10w × 16h chip (Figma's icon footprint)
+   Typeface, sizes, tracking already match Figma:
+     bot label   10/16/0.1  Regular  content/primary
+     headline    13/20      Bold     content/primary
+     url         10/16/0.1  Regular  content/tertiary
+
+   The 28px left padding clears the hairline + tab indicator on the
+   left edge of the list column.
 */
 function ArticleRow({ article }: { article: Article }) {
   return (
-    <div className="flex gap-4 py-4">
-      <div className="flex flex-col gap-0.5 pl-4">
+    <div className="pl-7 py-4">
+      <div className="flex flex-col gap-0.5 w-[284px]">
         <div className="flex items-center gap-1 font-jakarta text-[10px] leading-4 tracking-[0.1px] text-content-primary">
           <span
             className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] text-white text-[8px] font-bold"
@@ -54,14 +66,49 @@ function ArticleRow({ article }: { article: Article }) {
           </span>
           {article.bot.name}
         </div>
-        <div className="font-jakarta font-bold text-[13px] leading-5 text-content-primary">
+        {/* Headline — Body/X Small Bold (Figma node 1764:24169):
+            13/20/0 Bold content/primary, single-line ellipsis. */}
+        <div className="font-jakarta font-bold text-[13px] leading-5 text-content-primary overflow-hidden text-ellipsis whitespace-nowrap">
           {article.headline}
         </div>
-        <div className="font-jakarta text-[10px] leading-4 tracking-[0.1px] text-content-tertiary">
+        {/* URL — Body/XS Small (Figma node 1764:24170):
+            10/16/0.1 Regular content/tertiary, single-line ellipsis. */}
+        <div className="font-jakarta text-[10px] leading-4 tracking-[0.1px] text-content-tertiary overflow-hidden text-ellipsis whitespace-nowrap">
           {article.url}
         </div>
       </div>
     </div>
+  );
+}
+
+/* ────────────────────── Tab indicator ──────────────────────
+   Beige pill that "comes out of" the static grey hairline next to
+   the newest article row. Anchored at the hairline (left = 0) with
+   origin-left so it grows rightward — visually emerging from the line.
+
+   Dimensions verbatim from Figma node 1766:43269:
+     width  6px
+     height 65px (≈ one row height)
+     border-radius: 0 on the left, 32px on the right (pill end)
+     background: --color-tab-bg (#dfd9d7)
+
+   Animation:
+     • isNew true  → scaleX 0 → 1, smooth ease-out  (emerges)
+     • isNew false → scaleX 1 → 0, snappier ease    (retracts)
+*/
+function TabIndicator({ isNew }: { isNew: boolean }) {
+  return (
+    <motion.span
+      aria-hidden
+      className="absolute left-0 top-1 h-16 w-1.5 rounded-r-[32px] bg-tab-bg origin-left pointer-events-none"
+      initial={{ scaleX: 0 }}
+      animate={{ scaleX: isNew ? 1 : 0 }}
+      transition={
+        isNew
+          ? { duration: 0.55, ease: [0.22, 1, 0.36, 1] }
+          : { duration: 0.45, ease: [0.4, 0, 0.2, 1] }
+      }
+    />
   );
 }
 
@@ -109,7 +156,9 @@ function LeftColumn({
               left edge, full height. It never moves; new article rows slide
               in horizontally beside it. Per-row coral overrides (in
               ArticleRow) render on top of this. */}
-          <span className="absolute left-0 top-0 bottom-0 w-px bg-line-10" />
+          {/* Hairline starts at top-1 (4px) so its top edge aligns with
+              the tab indicator, which is also anchored at top-1. */}
+          <span className="absolute left-0 top-1 bottom-0 w-px bg-line-10" />
 
           <AnimatePresence initial={false}>
             {articles.map((a) => {
@@ -130,14 +179,22 @@ function LeftColumn({
                   }}
                   className="relative"
                 >
+                  {/* Beige tab indicator — protrudes from the hairline next
+                      to the newest article, then retracts when it's no
+                      longer the most recent. */}
+                  <TabIndicator isNew={isNew} />
+
                   {/* Sliding content — the article text slides in from
-                      the right with a slow, heavy spring. No coral line
-                      or gradient in this MVP variant. */}
+                      the right with a slow, heavy spring. */}
                   <motion.div
-                    initial={isNew ? { x: 120, scale: 0.98 } : false}
-                    animate={{ x: 0, scale: 1 }}
+                    initial={isNew ? { x: 120, y: -4, scale: 0.98 } : false}
+                    // While isNew, the row sits 4px higher so it visually
+                    // centers with the 64px-tall tab indicator on its left.
+                    // When isNew clears (tab retracts), it eases back to y=0.
+                    animate={{ x: 0, y: isNew ? -4 : 0, scale: 1 }}
                     transition={{
                       x: { type: 'spring', stiffness: 90, damping: 22 },
+                      y: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
                       scale: { duration: 0.6 },
                     }}
                   >
