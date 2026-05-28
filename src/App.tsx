@@ -41,7 +41,7 @@ function Nav() {
    MVP variant: no coral highlight — just the article content. The
    sliding motion is handled by the wrapper in LeftColumn.
 */
-function ArticleRow({ article }: { article: Article }) {
+function ArticleRow({ article, isNew }: { article: Article; isNew: boolean }) {
   return (
     <div className="flex gap-4 py-4">
       <div className="flex flex-col gap-0.5 pl-4">
@@ -54,8 +54,43 @@ function ArticleRow({ article }: { article: Article }) {
           </span>
           {article.bot.name}
         </div>
-        <div className="font-jakarta font-bold text-[13px] leading-5 text-content-primary">
-          {article.headline}
+        {/* Headline — base text stays content-primary. When the row is
+            "new", an overlay span with the same text renders on top:
+            transparent text with a coral linear-gradient clipped to the
+            glyph shapes via background-clip: text. The gradient's
+            backgroundPositionX animates from off-left to off-right in
+            the same 1500ms / cubic-bezier window as the row's fall, so
+            the coral color sweeps THROUGH the title — character by
+            character — instead of overlaying the whole row. */}
+        <div className="relative">
+          <div className="font-jakarta font-bold text-[13px] leading-5 text-content-primary">
+            {article.headline}
+          </div>
+          {isNew && (
+            <motion.span
+              aria-hidden
+              className="absolute inset-0 font-jakarta font-bold text-[13px] leading-5 pointer-events-none whitespace-pre"
+              style={{
+                backgroundImage:
+                  'linear-gradient(90deg, rgba(255,92,51,0) 30%, #ff5c33 50%, rgba(255,92,51,0) 70%)',
+                backgroundSize: '200% 100%',
+                backgroundRepeat: 'no-repeat',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent',
+                WebkitTextFillColor: 'transparent',
+              }}
+              // Same 1200ms / cubic-bezier(0.45, 0, 0.55, 1) as the bubble
+              // glow. Delayed by 0.5s so the sweep starts after the row's
+              // headline has fallen into the visible portion of the list
+              // (the row enters from y=-120, well above the viewport).
+              initial={{ backgroundPositionX: '150%' }}
+              animate={{ backgroundPositionX: '-50%' }}
+              transition={{ duration: 1.2, delay: 0.5, ease: [0.45, 0, 0.55, 1] }}
+            >
+              {article.headline}
+            </motion.span>
+          )}
         </div>
         <div className="font-jakarta text-[10px] leading-4 tracking-[0.1px] text-content-tertiary">
           {article.url}
@@ -125,23 +160,32 @@ function LeftColumn({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{
-                    layout: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+                    // Layout reflow (existing rows shifting down to make
+                    // room for the new one) matches the new row's y-fall
+                    // exactly — same 1500ms duration + bezier — so the
+                    // push-down and the incoming impression move together.
+                    layout: { duration: 1.5, ease: [0.66, 0, 0.33, 1] },
                     opacity: { duration: 0.45 },
                   }}
                   className="relative"
                 >
-                  {/* Sliding content — the article text slides in from
-                      the right with a slow, heavy spring. No coral line
-                      or gradient in this MVP variant. */}
+                  {/* Sliding content — new impressions fall straight DOWN
+                      from above on the y-axis. 1500ms with a custom bezier
+                      (0.66, 0, 0.33, 1) for a super-smooth ease-in-out feel.
+                      The orange sweep now lives inside ArticleRow as a
+                      text-clipped overlay on the headline only. */}
                   <motion.div
-                    initial={isNew ? { x: 120, scale: 0.98 } : false}
-                    animate={{ x: 0, scale: 1 }}
+                    // Starts above its own row height (~88px) so the
+                    // incoming row's text never overlaps the previous top
+                    // row that's sliding down. -120 gives a bit of extra
+                    // headroom for a clean drop-in.
+                    initial={isNew ? { y: -120 } : false}
+                    animate={{ y: 0 }}
                     transition={{
-                      x: { type: 'spring', stiffness: 90, damping: 22 },
-                      scale: { duration: 0.6 },
+                      y: { duration: 1.5, ease: [0.66, 0, 0.33, 1] },
                     }}
                   >
-                    <ArticleRow article={a} />
+                    <ArticleRow article={a} isNew={isNew} />
                   </motion.div>
                 </motion.div>
               );
