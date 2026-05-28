@@ -1,7 +1,7 @@
 # TollBit — Live AI Impressions (animation prototype)
 
 An animated React reference for the "Live AI Impressions" interaction,
-built from Figma designs. Two branches; pick whichever fits the
+built from Figma designs. Three branches; pick whichever fits the
 implementation phase.
 
 ## Branches
@@ -18,6 +18,14 @@ Just the slide-in motion. No coral line, no gradient highlight on the
 list. Bubble glow + growth still happen. Use this as the smallest
 viable scope.
 
+### `tab-indicator` — tab variant
+Replaces the coral line with a small beige tab (Figma node 1766:43269)
+that protrudes from the hairline next to the newest row, holds, then
+retracts back into the line. Article rows also adopt the canonical
+impression component (Figma node 1771:43406): 284px width, truncated
+single-line headline + URL, and the new row nudges 4px up while the
+tab is extended so it visually centers with the 64px-tall tab.
+
 ## Run locally
 
 ```bash
@@ -29,7 +37,7 @@ npm run dev
 
 Then open http://localhost:5173/.
 
-Switch branches with `git checkout slide-in-only` or `git checkout main`.
+Switch branches with `git checkout slide-in-only`, `git checkout tab-indicator`, or `git checkout main`.
 
 ## Stack
 React 19 · TypeScript · Vite · Tailwind v4 (`@theme` tokens) · Framer Motion
