@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+# TollBit — Live AI Impressions (animation prototype)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An animated React reference for the "Live AI Impressions" interaction,
+built from Figma designs. Two branches; pick whichever fits the
+implementation phase.
 
-Currently, two official plugins are available:
+## Branches
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### `main` — full interaction
+The complete animation: article slides in from the right, a coral line
+draws down on the most-recent row (spring retract when superseded), the
+matching topic bubble pings with a radial-gradient glow and grows
+permanently by 8px in diameter. Bubbles drift on a per-bubble sine wave
+and push each other apart with mass-weighted collision physics.
 
-## React Compiler
+### `slide-in-only` — MVP
+Just the slide-in motion. No coral line, no gradient highlight on the
+list. Bubble glow + growth still happen. Use this as the smallest
+viable scope.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Run locally
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/harseet-design/tollbit-live-impressions
+cd tollbit-live-impressions
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Then open http://localhost:5173/.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Switch branches with `git checkout slide-in-only` or `git checkout main`.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Stack
+React 19 · TypeScript · Vite · Tailwind v4 (`@theme` tokens) · Framer Motion
+
+Design tokens (colors, typography, the bubble glow SVG) are pulled
+verbatim from the Figma library — see `src/index.css` for the token
+declarations and `src/App.tsx` for the inline SVG gradients.
+
+## Where to look first
+- `src/App.tsx` — all UI + animation logic, broken into `Nav`,
+  `LeftColumn`, `BubbleChart`, `Timeline`, and the top-level `App`.
+- `src/data.ts` — bubble positions, the mass-weighted relaxation
+  function (`relaxBubbles`), and the topic-rotation article generator.
+- `src/index.css` — Tailwind v4 `@theme` block with design tokens.
