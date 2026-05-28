@@ -44,3 +44,9 @@ declarations and `src/App.tsx` for the inline SVG gradients.
 - `src/data.ts` — bubble positions, the mass-weighted relaxation
   function (`relaxBubbles`), and the topic-rotation article generator.
 - `src/index.css` — Tailwind v4 `@theme` block with design tokens.
+
+---
+
+_Built with prompts by Harseet, who told Claude to add this README
+explaining the contents._
+
