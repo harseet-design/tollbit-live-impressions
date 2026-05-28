@@ -1,7 +1,7 @@
 # TollBit — Live AI Impressions (animation prototype)
 
 An animated React reference for the "Live AI Impressions" interaction,
-built from Figma designs. Four branches; pick whichever fits the
+built from Figma designs. Five branches; pick whichever fits the
 implementation phase.
 
 ## Branches
@@ -30,6 +30,15 @@ tab is extended so it visually centers with the 64px-tall tab.
 Identical to `tab-indicator` except the new impression enters from
 the left side of the column instead of the right.
 
+### `impressions-fall-down` — y-axis drop + text-mask sweep
+New impressions fall from above (y=-120 → 0) over 1500ms with
+`cubic-bezier(0.66, 0, 0.33, 1)`, and existing rows reflow downward
+on the same easing so the push-down and incoming row move together.
+A coral linear-gradient is clipped to the headline glyph shapes via
+`background-clip: text` and sweeps left→right through the title with
+the bubble glow's transition (1200ms, `cubic-bezier(0.45, 0, 0.55, 1)`),
+delayed 0.5s so it triggers once the row is in view.
+
 ## Run locally
 
 ```bash
@@ -41,7 +50,7 @@ npm run dev
 
 Then open http://localhost:5173/.
 
-Switch branches with `git checkout slide-in-only`, `git checkout tab-indicator`, `git checkout slide-from-left`, or `git checkout main`.
+Switch branches with `git checkout slide-in-only`, `git checkout tab-indicator`, `git checkout slide-from-left`, `git checkout impressions-fall-down`, or `git checkout main`.
 
 ## Stack
 React 19 · TypeScript · Vite · Tailwind v4 (`@theme` tokens) · Framer Motion
