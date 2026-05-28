@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+// NOTE: This branch (`slide-in-only`) is the MVP variant — article rows
+// slide in from the right with no coral line / gradient highlight.
 import { AnimatePresence, motion } from 'framer-motion';
 import { INITIAL_ARTICLES, BUBBLES, makeNewArticle, relaxBubbles, type Article } from './data';
 
@@ -14,13 +16,6 @@ const AUTO_INTERVAL_MS = 3800;
    ───────────────────────────────────────────────────────── */
 const APPLE_GLOW_SVG =
   "url(\"data:image/svg+xml;utf8,<svg viewBox='0 0 280 280' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%25' width='100%25' fill='url(%23grad)' opacity='0.15'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(8.45 -21.7 42.957 16.728 140 217)'><stop stop-color='rgba(26,21,20,0)' offset='0.26442'/><stop stop-color='rgba(178,72,38,0.5)' offset='0.55529'/><stop stop-color='rgba(255,92,51,1)' offset='0.84615'/></radialGradient></defs></svg>\")";
-
-/* Article-row sticky highlight — verbatim from Figma node 1120:38594.
-   Linear gradient from coral (#FF5C33) to transparent white. The gradient
-   starts past the left edge so the visible left side already begins with a
-   strong coral wash, fading to fully transparent ~63% across. */
-const ARTICLE_HIGHLIGHT_SVG =
-  "url(\"data:image/svg+xml;utf8,<svg preserveAspectRatio='none' width='100%25' height='100%25' viewBox='0 0 303 75' xmlns='http://www.w3.org/2000/svg'><path d='M0 0H303V75H0V37.5V0Z' fill='url(%23g)'/><defs><linearGradient id='g' x1='-159.209' y1='37.9518' x2='303' y2='37.4039' gradientUnits='userSpaceOnUse'><stop stop-color='%23FF5C33'/><stop offset='0.634615' stop-color='white' stop-opacity='0'/></linearGradient></defs></svg>\")";
 
 /* ───────────────────────── Top nav ───────────────────────── */
 function Nav() {
@@ -43,13 +38,9 @@ function Nav() {
 }
 
 /* ────────────────────── Article row ──────────────────────
-   When `isLatest` is true, a soft coral radial-gradient overlay
-   sits behind the text — it persists until the next article logs
-   (state-driven, no timeout).
+   MVP variant: no coral highlight — just the article content. The
+   sliding motion is handled by the wrapper in LeftColumn.
 */
-/* ArticleRow is now just the content — no line, no isLatest. The orange
-   line lives separately (ArticleLineAccent) so it can stay at x = 0 while
-   the row content slides in from the right. */
 function ArticleRow({ article }: { article: Article }) {
   return (
     <div className="flex gap-4 py-4">
@@ -74,46 +65,13 @@ function ArticleRow({ article }: { article: Article }) {
   );
 }
 
-/* Coral 1px accent over the static grey hairline.
-   Stays fixed horizontally (does NOT slide with the article content).
-     pre    clip 0/100%, opacity 1   collapsed at top, invisible
-     active clip 0/0,    opacity 1   full line, fully visible    — entered by clip-path slide-down
-     post   clip 0/0,    opacity 0   full line, fully transparent — exits by opacity fade-out
-   Same 1200ms ease-in-out timing as the previous gradient. */
-function ArticleLineAccent({ isLatest }: { isLatest: boolean }) {
-  const everLatestRef = useRef(false);
-  if (isLatest) everLatestRef.current = true;
-
-  const phase: 'pre' | 'active' | 'post' = isLatest
-    ? 'active'
-    : everLatestRef.current
-    ? 'post'
-    : 'pre';
-
-  const style = {
-    pre: { clipPath: 'inset(0 0 100% 0)', opacity: 1 },
-    active: { clipPath: 'inset(0 0 0 0)', opacity: 1 },
-    post: { clipPath: 'inset(0 0 0 0)', opacity: 0 },
-  }[phase];
-
-  return (
-    <span
-      aria-hidden
-      className="absolute left-0 top-0 bottom-0 w-px bg-brand-6 pointer-events-none transition-all duration-[1200ms] ease-[cubic-bezier(0.45,0,0.55,1)]"
-      style={style}
-    />
-  );
-}
-
 /* ───────────────── Hero + live impressions ───────────────── */
 function LeftColumn({
   articles,
   newId,
-  latestArticleId,
 }: {
   articles: Article[];
   newId: string | null;
-  latestArticleId: string | null;
 }) {
   return (
     <div className="absolute left-12 top-28 w-[312px]">
@@ -172,18 +130,15 @@ function LeftColumn({
                   }}
                   className="relative"
                 >
-                  {/* Stationary coral line — clip-path/opacity transitions
-                      only; does NOT translate with the article content. */}
-                  <ArticleLineAccent isLatest={a.id === latestArticleId} />
-
-                  {/* Sliding content — only the article text slides in
-                      from the right when the row is new. */}
+                  {/* Sliding content — the article text slides in from
+                      the right with a slow, heavy spring. No coral line
+                      or gradient in this MVP variant. */}
                   <motion.div
-                    initial={isNew ? { x: 60, scale: 0.98 } : false}
+                    initial={isNew ? { x: 120, scale: 0.98 } : false}
                     animate={{ x: 0, scale: 1 }}
                     transition={{
-                      x: { type: 'spring', stiffness: 220, damping: 26 },
-                      scale: { duration: 0.45 },
+                      x: { type: 'spring', stiffness: 90, damping: 22 },
+                      scale: { duration: 0.6 },
                     }}
                   >
                     <ArticleRow article={a} />
@@ -344,9 +299,6 @@ export default function App() {
   const [glowingTopic, setGlowingTopic] = useState<string | null>(null);
   // Permanent counter per topic — each new article bumps its bubble by 2px in diameter
   const [topicBumps, setTopicBumps] = useState<Record<string, number>>({});
-  // Sticky "most recent" article — keeps the coral highlight on its list row
-  // until the next log arrives, then hands off.
-  const [latestArticleId, setLatestArticleId] = useState<string | null>(null);
   const holdRef = useRef<number | null>(null);
   const autoRef = useRef<number | null>(null);
 
@@ -355,7 +307,6 @@ export default function App() {
     setArticles((prev) => [next, ...prev]);
     setNewId(next.id);
     setGlowingTopic(next.topic);
-    setLatestArticleId(next.id);
     setTopicBumps((prev) => ({
       ...prev,
       [next.topic]: (prev[next.topic] ?? 0) + 1,
@@ -368,7 +319,6 @@ export default function App() {
       // highlight. They all share the same 1200ms ease-in-out fade.
       setNewId(null);
       setGlowingTopic(null);
-      setLatestArticleId(null);
     }, NEW_ARTICLE_HOLD_MS);
   };
 
@@ -377,7 +327,6 @@ export default function App() {
     setArticles(INITIAL_ARTICLES);
     setNewId(null);
     setGlowingTopic(null);
-    setLatestArticleId(null);
     setTopicBumps({});
   };
 
@@ -392,7 +341,7 @@ export default function App() {
   return (
     <div className="relative w-[1440px] mx-auto min-h-[880px]">
       <Nav />
-      <LeftColumn articles={articles} newId={newId} latestArticleId={latestArticleId} />
+      <LeftColumn articles={articles} newId={newId} />
       <BubbleChart glowingTopic={glowingTopic} topicBumps={topicBumps} />
       <Timeline />
 
