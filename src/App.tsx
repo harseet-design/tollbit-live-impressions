@@ -185,9 +185,10 @@ function LeftColumn({
                   <TabIndicator isNew={isNew} />
 
                   {/* Sliding content — the article text slides in from
-                      the right with a slow, heavy spring. */}
+                      the LEFT with a slow, heavy spring. (Same motion as
+                      the tab variant, just mirrored on the x axis.) */}
                   <motion.div
-                    initial={isNew ? { x: 120, y: -4, scale: 0.98 } : false}
+                    initial={isNew ? { x: -120, y: -4, scale: 0.98 } : false}
                     // While isNew, the row sits 4px higher so it visually
                     // centers with the 64px-tall tab indicator on its left.
                     // When isNew clears (tab retracts), it eases back to y=0.
